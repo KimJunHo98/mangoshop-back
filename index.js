@@ -4,6 +4,19 @@ const cors = require("cors");
 const app = express();
 const port = 8080;
 const models = require("./models");
+const multer  = require('multer');
+
+const upload = multer({
+	storage:multer.diskStorage({
+		destination:function(req,file,cb){
+			cb(null,"uploads/"); // callback
+		},
+        filename: function(req, file, cb){
+            cb(null, file.originalname);
+        }
+	})
+});
+ // storage서버
 
 // json형식의 데이터를 처리할 수 있게 설정
 app.use(express.json());
@@ -11,8 +24,13 @@ app.use(cors());
 
 // path설정
 app.get("/products", (req, res) => {
-    models.Product.findAll()
-    .then((result) => {
+    models.Product.findAll({
+		// limit:1
+        order: [
+			['createdAt','DESC']
+		],
+        attribute: ["id", "name", "price", "seller", "imageUrl", "createAt"]
+	}).then((result) => {
         console.log("product 조회결과:", result);
 
         res.send({product: result});
@@ -22,6 +40,31 @@ app.get("/products", (req, res) => {
         res.send("에러가 발생했습니다.");
     });
 })
+
+app.get("/products/:id", (req, res)=>{
+    const params = req.params;
+    const {id}=params;
+
+    //단일상품조회는 findOne	
+	models.Product.findOne({ 
+    //조건문 where 사용 => id가 상수 id와 같은것 
+		where: {
+			id: id,
+		}
+    }).then((result) => { 
+    	//통신성공시 콘솔에 product 객체를 출력하고 
+        console.log("prodcut:",result);
+
+        //res.send로 product 객체에 result 를 저장
+        res.send({product: result});
+    }).catch((error) => {
+        //통신 실패시 res에 메시지 전달
+        console.error(error);
+
+        res.send('상품조회시 에러가 발생했습니다.');
+    });
+})
+
 
 // 상품 생성 데이터를 DB에 추가
 app.post("/products", (req, res) => {
@@ -39,7 +82,7 @@ app.post("/products", (req, res) => {
         name, 
         price, 
         desc, 
-        seller, 
+        seller,
     }).then((result) => {
         console.log("상품생성결과", result);
         
@@ -51,9 +94,18 @@ app.post("/products", (req, res) => {
     });
 })
 
+app.post("/image", upload.single("image"),(req, res) => {
+    const file = req.file;
+
+    res.send({
+        imageUrl: file.path,
+    })
+})
+
 app.post("/login", (req, res) => {
     res.send("로그인이 완료되었습니다.");
 })
+
 
 
 // app실행
