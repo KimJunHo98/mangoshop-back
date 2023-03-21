@@ -23,12 +23,25 @@ app.use(express.json());
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
 
-// path설정
+app.get("/banners", (req, res) => {
+  models.Banner.findAll({
+    limit: 2
+  }).then((result) => {
+    console.log("banner 조회결과:", result);
+
+    res.send({ banner: result });
+  }).catch((error) => {
+    console.error(error);
+
+    res.status(500).send("에러가 발생했습니다");
+  })
+})
+
 app.get("/products", (req, res) => {
   models.Product.findAll({
-    // limit:1
+    // limit:1,
     order: [["createdAt", "DESC"]],
-    attribute: ["id", "name", "price", "seller", "imageUrl", "createAt"],
+    attribute: ["id", "name", "price", "seller", "imageUrl", "createAt", "soldout"],
   })
     .then((result) => {
       console.log("product 조회결과:", result);
@@ -97,6 +110,28 @@ app.post("/products", (req, res) => {
       console.error(error);
 
       res.send("상품 업로드에 문제가 발생했습니다.");
+    });
+});
+
+app.post("/purchase/:id", (req, res) => {
+  const { id } = req.params;
+
+  models.Product.update(
+    {
+      soldout: 1,
+    },
+    {
+      where: {
+        id,
+      },
+    }
+  )
+    .then((result) => {
+      res.send({ result: true });
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).send("에러가 발생했습니다.");
     });
 });
 
